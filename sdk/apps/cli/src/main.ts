@@ -129,7 +129,11 @@ export async function runCli(): Promise<void> {
 	const normalizedArgs = normalizeAutoApproveArgs(cliArgs);
 
 	// Subcommand routing via Commander
-	const ctx: { exitCode?: number; resumeSessionId?: string } = {};
+	const ctx: {
+		exitCode?: number;
+		launchHistoryView?: boolean;
+		resumeSessionId?: string;
+	} = {};
 	const io = { writeln, writeErr };
 	const program = createProgram();
 	// Re-enable built-in help/version output for the routing program
@@ -370,6 +374,14 @@ export async function runCli(): Promise<void> {
 				program.opts().json || opts.json
 					? ("json" as const)
 					: ("text" as const);
+			if (
+				outputMode === "text" &&
+				process.stdin.isTTY &&
+				process.stdout.isTTY
+			) {
+				ctx.launchHistoryView = true;
+				return;
+			}
 			const { runHistoryList } = await import("./commands/history");
 			const result = await runHistoryList({
 				limit,
@@ -600,7 +612,7 @@ export async function runCli(): Promise<void> {
 	let args = commanderToParsedArgs(program);
 
 	let resumeSessionId: string | undefined = ctx.resumeSessionId;
-	if (resumeSessionId) {
+	if (resumeSessionId || ctx.launchHistoryView) {
 		args = {
 			...args,
 			interactive: true,
@@ -986,9 +998,11 @@ export async function runCli(): Promise<void> {
 				return;
 			}
 			const runInteractive = await loadInteractiveRuntimeModule();
-			let initialView: "chat" | "config" | undefined;
+			let initialView: "chat" | "config" | "history" | undefined;
 			if (launchConfigView) {
 				initialView = "config";
+			} else if (ctx.launchHistoryView) {
+				initialView = "history";
 			} else if (resumeSessionId) {
 				initialView = "chat";
 			}
@@ -1002,7 +1016,12 @@ export async function runCli(): Promise<void> {
 						notice: import("./kanban-migration/notice").CliMigrationNotice,
 				  ) => void)
 				| undefined;
-			if (!launchConfigView && process.stdin.isTTY && process.stdout.isTTY) {
+			if (
+				!launchConfigView &&
+				!ctx.launchHistoryView &&
+				process.stdin.isTTY &&
+				process.stdout.isTTY
+			) {
 				const { getClineCliMigrationNotice, markClineCliMigrationNoticeShown } =
 					await import("./kanban-migration/notice");
 				initialNotice = getClineCliMigrationNotice();

@@ -715,23 +715,25 @@ describe("runCli lightweight command dispatch", () => {
 		);
 	});
 
-	it("forces chat view when resuming from history picker", async () => {
-		historyMocks.runHistoryList.mockImplementationOnce(
-			async () => "sess_from_history",
-		);
+	it("opens history inside the interactive TUI for the history picker", async () => {
+		Object.defineProperty(process.stdout, "isTTY", {
+			value: true,
+			configurable: true,
+		});
 		process.argv = ["bun", "src/index.ts", "history"];
 
 		const { runCli } = await import("./main");
 
 		await expect(runCli()).resolves.toBeUndefined();
+		expect(historyMocks.runHistoryList).not.toHaveBeenCalled();
 		expect(runtimeMocks.runInteractive).toHaveBeenCalledTimes(1);
 		expect(runtimeMocks.runInteractive).toHaveBeenCalledWith(
 			expect.any(Object),
 			expect.anything(),
-			"sess_from_history",
+			undefined,
 			expect.objectContaining({
 				initialPrompt: undefined,
-				initialView: "chat",
+				initialView: "history",
 			}),
 		);
 	});

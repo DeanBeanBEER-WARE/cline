@@ -105,7 +105,7 @@ export type AppView = "onboarding" | "home" | "chat";
 
 export interface TuiProps {
 	config: Config;
-	initialView?: "chat" | "config";
+	initialView?: "chat" | "config" | "history";
 	initialPrompt?: string;
 	initialNotice?: CliMigrationNotice;
 	onInitialNoticeShown?: (notice: CliMigrationNotice) => void | Promise<void>;
