@@ -1131,30 +1131,22 @@ function isStructuredToolResultEntry(entry: unknown): boolean {
 	return type !== "text" && type !== "image" && type !== "file";
 }
 
-const BINARY_DATA_BLOCK_TYPES = new Set([
-	"image",
-	"document",
-	"audio",
-	"video",
-]);
-
 /**
- * Binary carrier blocks must never have their payload strings truncated — a
- * middle-cut base64 string is garbage to the downstream multimodal
- * extraction. The check is restricted to known binary block types: matching
- * any `{type, data}` shape would silently exempt textual payloads such as
- * `{type: "log", data: "..."}` from every cap.
+ * Image blocks are hoisted by the formatter into native multimodal payloads,
+ * so middle-cutting their base64 data would corrupt the downstream image.
+ * Other `{type, data}` shapes must stay truncatable until the formatter has
+ * native support for them.
  */
 function isBinaryContentLike(value: object): boolean {
-	const record = value as { type?: unknown; data?: unknown };
-	if (typeof record.type !== "string") {
-		return false;
-	}
-	if (record.type === "image") {
-		return true;
-	}
+	const record = value as {
+		type?: unknown;
+		data?: unknown;
+		mediaType?: unknown;
+	};
 	return (
-		BINARY_DATA_BLOCK_TYPES.has(record.type) && typeof record.data === "string"
+		record.type === "image" &&
+		typeof record.data === "string" &&
+		typeof record.mediaType === "string"
 	);
 }
 
